@@ -77,8 +77,7 @@ LIST_FIELDS = {
 def create_item(db: Session, model: type, values: dict[str, Any]) -> Any:
     item = model(**values)
     db.add(item)
-    db.commit()
-    db.refresh(item)
+    db.flush()
     return item
 
 
@@ -86,8 +85,7 @@ def update_item(db: Session, model: type, item_id: int, values: dict[str, Any]) 
     item = get_active_item(db, model, item_id)
     for key, value in values.items():
         setattr(item, key, value)
-    db.commit()
-    db.refresh(item)
+    db.flush()
     return item
 
 
@@ -97,7 +95,7 @@ def soft_delete_item(db: Session, model: type, item_id: int) -> Any:
         item.deleted_at = datetime.now(timezone.utc)
     else:
         db.delete(item)
-    db.commit()
+    db.flush()
     return item
 
 

@@ -7,7 +7,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.api.v1 import system as system_api
 from app.core.database import get_db
+from app.core.errors import AppError
 from app.core.security import hash_password
 from app.main import app
 from app.models.base import Base
@@ -102,6 +104,18 @@ def test_create_update_delete_user(system_client: TestClient) -> None:
     assert created["username"] == "demo"
     assert created["nickname"] == "Demo"
     assert "password_hash" not in created
+    operation_logs = system_client.get(
+        "/api/v1/system/operation-logs",
+        headers=headers,
+    ).json()["data"]["items"]
+    create_log = next(
+        item for item in operation_logs if item["permission"] == "system:user:create"
+    )
+    assert create_log["username"] == "admin"
+    assert create_log["title"] == "创建用户"
+    assert create_log["method"] == "POST"
+    assert create_log["path"] == "/api/v1/system/users"
+    assert create_log["success"] is True
 
     user_id = created["id"]
     update_response = system_client.put(
@@ -132,6 +146,54 @@ def test_create_update_delete_user(system_client: TestClient) -> None:
     )
     usernames = [item["username"] for item in list_response.json()["data"]["items"]]
     assert "demo" not in usernames
+
+    update_deleted_response = system_client.put(
+        f"/api/v1/system/users/{user_id}",
+        headers=headers,
+        json={"nickname": "Should Not Update"},
+    )
+    assert update_deleted_response.status_code == 404
+    assert update_deleted_response.json()["code"] == 100404
+
+    delete_deleted_response = system_client.delete(
+        f"/api/v1/system/users/{user_id}",
+        headers=headers,
+    )
+    assert delete_deleted_response.status_code == 404
+    assert delete_deleted_response.json()["code"] == 100404
+
+
+def test_create_user_rolls_back_when_operation_log_fails(
+    system_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    headers = auth_headers(system_client)
+
+    def fail_log_operation(*args: object, **kwargs: object) -> None:
+        raise AppError(code=199999, message="日志失败", status_code=500)
+
+    monkeypatch.setattr(system_api, "log_operation", fail_log_operation)
+
+    create_response = system_client.post(
+        "/api/v1/system/users",
+        headers=headers,
+        json={
+            "username": "rollback-demo",
+            "password": "Demo123!",
+            "nickname": "Rollback Demo",
+            "status": "enabled",
+        },
+    )
+
+    assert create_response.status_code == 500
+    assert create_response.json()["code"] == 199999
+
+    list_response = system_client.get(
+        "/api/v1/system/users",
+        headers=headers,
+    )
+    usernames = [item["username"] for item in list_response.json()["data"]["items"]]
+    assert "rollback-demo" not in usernames
 
 
 def test_system_configs_do_not_expose_raw_value(system_client: TestClient) -> None:

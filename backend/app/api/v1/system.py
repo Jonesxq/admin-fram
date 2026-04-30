@@ -30,15 +30,21 @@ def _create(
     permission: str,
     title: str,
 ) -> dict:
-    item = create_item(db, model, values)
-    log_operation(
-        db,
-        user=current_user,
-        permission=permission,
-        title=title,
-        request=request,
-        success=True,
-    )
+    try:
+        item = create_item(db, model, values)
+        log_operation(
+            db,
+            user=current_user,
+            permission=permission,
+            title=title,
+            request=request,
+            success=True,
+        )
+        db.commit()
+        db.refresh(item)
+    except Exception:
+        db.rollback()
+        raise
     return success(to_safe_dict(item), request_id=get_request_id(request))
 
 
@@ -52,15 +58,21 @@ def _update(
     permission: str,
     title: str,
 ) -> dict:
-    item = update_item(db, model, item_id, values)
-    log_operation(
-        db,
-        user=current_user,
-        permission=permission,
-        title=title,
-        request=request,
-        success=True,
-    )
+    try:
+        item = update_item(db, model, item_id, values)
+        log_operation(
+            db,
+            user=current_user,
+            permission=permission,
+            title=title,
+            request=request,
+            success=True,
+        )
+        db.commit()
+        db.refresh(item)
+    except Exception:
+        db.rollback()
+        raise
     return success(to_safe_dict(item), request_id=get_request_id(request))
 
 
@@ -73,15 +85,20 @@ def _delete(
     permission: str,
     title: str,
 ) -> dict:
-    soft_delete_item(db, model, item_id)
-    log_operation(
-        db,
-        user=current_user,
-        permission=permission,
-        title=title,
-        request=request,
-        success=True,
-    )
+    try:
+        soft_delete_item(db, model, item_id)
+        log_operation(
+            db,
+            user=current_user,
+            permission=permission,
+            title=title,
+            request=request,
+            success=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     return success({"id": item_id}, request_id=get_request_id(request))
 
 

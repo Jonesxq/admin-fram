@@ -11,22 +11,43 @@ from app.models.system import Menu, Role, User
 MENU_SEEDS = [
     {"title": "Dashboard", "path": "/dashboard", "component": "Dashboard", "permission": "dashboard:view"},
     {"title": "用户管理", "path": "/system/users", "component": "system/User", "permission": "system:user:list"},
+    {"type": "button", "title": "用户创建", "permission": "system:user:create"},
+    {"type": "button", "title": "用户修改", "permission": "system:user:update"},
+    {"type": "button", "title": "用户删除", "permission": "system:user:delete"},
     {"title": "角色管理", "path": "/system/roles", "component": "system/Role", "permission": "system:role:list"},
+    {"type": "button", "title": "角色创建", "permission": "system:role:create"},
+    {"type": "button", "title": "角色修改", "permission": "system:role:update"},
+    {"type": "button", "title": "角色删除", "permission": "system:role:delete"},
     {"title": "菜单管理", "path": "/system/menus", "component": "system/Menu", "permission": "system:menu:list"},
+    {"type": "button", "title": "菜单创建", "permission": "system:menu:create"},
+    {"type": "button", "title": "菜单修改", "permission": "system:menu:update"},
+    {"type": "button", "title": "菜单删除", "permission": "system:menu:delete"},
     {"title": "部门管理", "path": "/system/depts", "component": "system/Dept", "permission": "system:dept:list"},
+    {"type": "button", "title": "部门创建", "permission": "system:dept:create"},
+    {"type": "button", "title": "部门修改", "permission": "system:dept:update"},
+    {"type": "button", "title": "部门删除", "permission": "system:dept:delete"},
     {"title": "岗位管理", "path": "/system/posts", "component": "system/Post", "permission": "system:post:list"},
+    {"type": "button", "title": "岗位创建", "permission": "system:post:create"},
+    {"type": "button", "title": "岗位修改", "permission": "system:post:update"},
+    {"type": "button", "title": "岗位删除", "permission": "system:post:delete"},
     {
         "title": "字典管理",
         "path": "/system/dicts",
         "component": "system/Dict",
         "permission": "system:dict:list",
     },
+    {"type": "button", "title": "字典创建", "permission": "system:dict:create"},
+    {"type": "button", "title": "字典修改", "permission": "system:dict:update"},
+    {"type": "button", "title": "字典删除", "permission": "system:dict:delete"},
     {
         "title": "参数配置",
         "path": "/system/configs",
         "component": "system/Config",
         "permission": "system:config:list",
     },
+    {"type": "button", "title": "配置创建", "permission": "system:config:create"},
+    {"type": "button", "title": "配置修改", "permission": "system:config:update"},
+    {"type": "button", "title": "配置删除", "permission": "system:config:delete"},
     {
         "title": "登录日志",
         "path": "/monitor/login-logs",
@@ -100,10 +121,10 @@ def seed_menus(db: Session, role: Role) -> None:
         menu = get_seed_menu(db, item)
         if menu is None:
             menu = Menu(
-                type="menu",
+                type=item.get("type", "menu"),
                 title=item["title"],
-                path=item["path"],
-                component=item["component"],
+                path=item.get("path"),
+                component=item.get("component"),
                 permission=item["permission"],
                 icon=None,
                 sort=index,
@@ -112,9 +133,10 @@ def seed_menus(db: Session, role: Role) -> None:
             db.add(menu)
             db.flush()
         else:
+            menu.type = item.get("type", "menu")
             menu.title = item["title"]
-            menu.path = item["path"]
-            menu.component = item["component"]
+            menu.path = item.get("path")
+            menu.component = item.get("component")
             menu.permission = item["permission"]
             menu.sort = index
             menu.status = "enabled"
@@ -130,7 +152,10 @@ def get_seed_menu(db: Session, item: dict[str, str]) -> Menu | None:
         if menu is not None:
             return menu
 
-    return db.scalar(select(Menu).where(Menu.path == item["path"]))
+    path = item.get("path")
+    if path:
+        return db.scalar(select(Menu).where(Menu.path == path))
+    return None
 
 
 def seed(db: Session) -> None:

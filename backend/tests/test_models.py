@@ -24,6 +24,12 @@ SYSTEM_LIST_PERMISSIONS = {
     "system:login-log:list",
     "system:operation-log:list",
 }
+SYSTEM_WRITE_PERMISSIONS = {
+    f"system:{resource}:{action}"
+    for resource in ("user", "role", "menu", "dept", "post", "dict", "config")
+    for action in ("create", "update", "delete")
+}
+SYSTEM_PERMISSIONS = SYSTEM_LIST_PERMISSIONS | SYSTEM_WRITE_PERMISSIONS
 
 
 def test_system_tables_are_registered() -> None:
@@ -78,12 +84,12 @@ def test_seed_is_idempotent_and_uses_stable_menu_identity(
 
         assert admin_user_count == 1
         assert admin_role_count == 1
-        assert menu_count == 10
+        assert menu_count == 31
         assert admin_role is not None
-        assert len(admin_role.menus) == 10
+        assert len(admin_role.menus) == 31
 
 
-def test_seed_admin_role_has_system_list_permissions(
+def test_seed_admin_role_has_system_permissions(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("INITIAL_ADMIN_PASSWORD", "Strong-Local-Only-Password-123!")
@@ -97,10 +103,10 @@ def test_seed_admin_role_has_system_list_permissions(
         assert admin_role is not None
         permissions = {menu.permission for menu in admin_role.menus}
 
-        assert SYSTEM_LIST_PERMISSIONS <= permissions
+        assert SYSTEM_PERMISSIONS <= permissions
         assert {item["permission"] for item in MENU_SEEDS} == {
             "dashboard:view",
-            *SYSTEM_LIST_PERMISSIONS,
+            *SYSTEM_PERMISSIONS,
         }
 
 
@@ -158,7 +164,7 @@ def test_seed_allows_default_password_with_explicit_opt_in(
         menu_count = session.scalar(select(func.count()).select_from(system.Menu))
 
         assert admin_user_count == 1
-        assert menu_count == 10
+        assert menu_count == 31
         assert admin_user is not None
         assert bcrypt.checkpw("Admin123!".encode("utf-8"), admin_user.password_hash.encode("utf-8"))
 
