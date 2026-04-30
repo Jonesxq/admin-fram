@@ -1,0 +1,84 @@
+:root {
+  --oa-bg: #f6f8fb;
+  --oa-panel: #ffffff;
+  --oa-border: #dfe5ee;
+  --oa-primary: #0f766e;
+  --oa-text: #111827;
+  --oa-muted: #6b7280;
+  --oa-sidebar-width: 232px;
+  --oa-sidebar-collapsed-width: 64px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--oa-bg);
+  color: var(--oa-text);
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+.oa-shell {
+  display: grid;
+  grid-template-columns: var(--oa-sidebar-width) minmax(0, 1fr);
+  min-height: 100vh;
+  background: var(--oa-bg);
+  transition: grid-template-columns 0.2s ease;
+}
+
+.oa-shell.is-collapsed {
+  grid-template-columns: var(--oa-sidebar-collapsed-width) minmax(0, 1fr);
+}
+
+.oa-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  border-right: 1px solid var(--oa-border);
+  background: var(--oa-panel);
+}
+
+.oa-main {
+  display: flex;
+  min-width: 0;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+.oa-content {
+  flex: 1;
+  padding: 16px;
+  overflow: auto;
+}
+
+.oa-view {
+  min-height: calc(100vh - 112px);
+  border: 1px solid var(--oa-border);
+  border-radius: 8px;
+  background: var(--oa-panel);
+}
+
+@media (max-width: 768px) {
+  .oa-shell,
+  .oa-shell.is-collapsed {
+    grid-template-columns: 1fr;
+  }
+
+  .oa-sidebar {
+    display: none;
+  }
+}

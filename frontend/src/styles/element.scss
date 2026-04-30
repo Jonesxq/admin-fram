@@ -1,0 +1,52 @@
+:root {
+  --el-color-primary: #0f766e;
+  --el-color-primary-light-3: #2dd4bf;
+  --el-color-primary-light-5: #5eead4;
+  --el-color-primary-light-7: #99f6e4;
+  --el-color-primary-light-9: #f0fdfa;
+  --el-color-primary-dark-2: #0f5f59;
+  --el-border-color: #dfe5ee;
+  --el-border-color-light: #e8edf4;
+  --el-text-color-primary: #111827;
+  --el-text-color-regular: #374151;
+  --el-fill-color-blank: #ffffff;
+}
+
+.el-button {
+  font-weight: 600;
+}
+
+.el-button--primary {
+  --el-button-bg-color: var(--oa-primary);
+  --el-button-border-color: var(--oa-primary);
+  --el-button-hover-bg-color: #115e59;
+  --el-button-hover-border-color: #115e59;
+  --el-button-active-bg-color: #134e4a;
+  --el-button-active-border-color: #134e4a;
+}
+
+.el-menu {
+  --el-menu-bg-color: transparent;
+  --el-menu-hover-bg-color: rgba(15, 118, 110, 0.09);
+  --el-menu-active-color: var(--oa-primary);
+  --el-menu-text-color: #4b5563;
+  --el-menu-hover-text-color: var(--oa-text);
+  border-right: 0;
+}
+
+.el-menu-item,
+.el-sub-menu__title {
+  border-radius: 8px;
+  height: 44px;
+  line-height: 44px;
+  margin: 4px 12px;
+}
+
+.el-menu-item.is-active {
+  background: rgba(15, 118, 110, 0.12);
+  font-weight: 700;
+}
+
+.el-dropdown-menu__item {
+  min-width: 120px;
+}
