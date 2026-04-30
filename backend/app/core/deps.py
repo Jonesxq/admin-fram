@@ -37,4 +37,4 @@ def get_current_user(
 
 
 def unauthorized_error() -> AppError:
-    return AppError(code=100401, message="未认证或登录已过期", status_code=401)
+    return AppError(code=100401, message="未登录或登录已过期", status_code=401)

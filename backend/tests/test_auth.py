@@ -62,6 +62,7 @@ def test_me_without_token_returns_401(auth_client: TestClient) -> None:
 
     assert response.status_code == 401
     assert response.json()["code"] == 100401
+    assert response.json()["message"] == "未登录或登录已过期"
 
 
 def test_me_with_admin_token_returns_current_user_payload(auth_client: TestClient) -> None:
@@ -80,8 +81,20 @@ def test_me_with_admin_token_returns_current_user_payload(auth_client: TestClien
     assert response.json()["data"] == {
         "user": {"id": 1, "username": "admin", "nickname": "Administrator"},
         "roles": ["admin"],
-        "permissions": ["system:user:list"],
-        "menus": [],
+        "permissions": ["system:user", "system:user:list"],
+        "menus": [
+            {
+                "id": 2,
+                "parent_id": None,
+                "type": "menu",
+                "title": "用户管理",
+                "path": "/system/users",
+                "component": "system/User",
+                "permission": "system:user",
+                "icon": "users",
+                "sort": 1,
+            },
+        ],
     }
 
 
@@ -93,7 +106,17 @@ def seed_admin(db: Session) -> None:
         sort=0,
         status="enabled",
     )
-    role = Role(code="admin", name="Administrator", status="enabled", menus=[permission])
+    menu = Menu(
+        type="menu",
+        title="用户管理",
+        path="/system/users",
+        component="system/User",
+        permission="system:user",
+        icon="users",
+        sort=1,
+        status="enabled",
+    )
+    role = Role(code="admin", name="Administrator", status="enabled", menus=[permission, menu])
     user = User(
         username="admin",
         password_hash=hash_password("Admin123!"),
