@@ -1,11 +1,14 @@
 from collections.abc import Generator
+from datetime import datetime, timedelta, timezone
 
+import jwt
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import hash_password
 from app.main import app
@@ -60,9 +63,7 @@ def test_login_with_correct_credentials_returns_access_token(auth_client: TestCl
 def test_me_without_token_returns_401(auth_client: TestClient) -> None:
     response = auth_client.get("/api/v1/auth/me")
 
-    assert response.status_code == 401
-    assert response.json()["code"] == 100401
-    assert response.json()["message"] == "未登录或登录已过期"
+    assert_unauthorized(response)
 
 
 def test_me_with_admin_token_returns_current_user_payload(auth_client: TestClient) -> None:
@@ -98,6 +99,91 @@ def test_me_with_admin_token_returns_current_user_payload(auth_client: TestClien
     }
 
 
+def test_me_with_token_without_exp_returns_401(auth_client: TestClient) -> None:
+    token = encode_test_token({"sub": "1"})
+
+    response = get_me_with_token(auth_client, token)
+
+    assert_unauthorized(response)
+
+
+def test_me_with_expired_token_returns_401(auth_client: TestClient) -> None:
+    token = encode_test_token({
+        "sub": "1",
+        "exp": datetime.now(timezone.utc) - timedelta(minutes=1),
+    })
+
+    response = get_me_with_token(auth_client, token)
+
+    assert_unauthorized(response)
+
+
+def test_me_with_malformed_token_returns_401(auth_client: TestClient) -> None:
+    response = get_me_with_token(auth_client, "not-a-jwt")
+
+    assert_unauthorized(response)
+
+
+def test_me_with_missing_user_token_returns_401(auth_client: TestClient) -> None:
+    token = encode_test_token({
+        "sub": "999",
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+    })
+
+    response = get_me_with_token(auth_client, token)
+
+    assert_unauthorized(response)
+
+
+def test_me_with_disabled_user_token_returns_401(auth_client: TestClient) -> None:
+    token = encode_test_token({
+        "sub": "2",
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+    })
+
+    response = get_me_with_token(auth_client, token)
+
+    assert_unauthorized(response)
+
+
+def test_me_with_soft_deleted_user_token_returns_401(auth_client: TestClient) -> None:
+    token = encode_test_token({
+        "sub": "3",
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+    })
+
+    response = get_me_with_token(auth_client, token)
+
+    assert_unauthorized(response)
+
+
+def test_login_with_malformed_stored_hash_returns_401(auth_client: TestClient) -> None:
+    response = auth_client.post(
+        "/api/v1/auth/login",
+        json={"username": "broken", "password": "Admin123!"},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["code"] == 100401
+
+
+def get_me_with_token(auth_client: TestClient, token: str):
+    return auth_client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+
+def encode_test_token(payload: dict) -> str:
+    return jwt.encode(payload, settings.jwt_secret_key, algorithm="HS256")
+
+
+def assert_unauthorized(response) -> None:
+    assert response.status_code == 401
+    assert response.json()["code"] == 100401
+    assert response.json()["message"] == "未登录或登录已过期"
+
+
 def seed_admin(db: Session) -> None:
     permission = Menu(
         type="button",
@@ -124,4 +210,22 @@ def seed_admin(db: Session) -> None:
         status="enabled",
         roles=[role],
     )
-    db.add(user)
+    disabled_user = User(
+        username="disabled",
+        password_hash=hash_password("Admin123!"),
+        nickname="Disabled",
+        status="disabled",
+    )
+    deleted_user = User(
+        username="deleted",
+        password_hash=hash_password("Admin123!"),
+        nickname="Deleted",
+        status="deleted",
+    )
+    broken_hash_user = User(
+        username="broken",
+        password_hash="not-a-bcrypt-hash",
+        nickname="Broken",
+        status="enabled",
+    )
+    db.add_all([user, disabled_user, deleted_user, broken_hash_user])
