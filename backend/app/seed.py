@@ -1,3 +1,5 @@
+import os
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -39,6 +41,22 @@ MENU_SEEDS = [
     },
 ]
 
+DEFAULT_INITIAL_ADMIN_PASSWORD = "Admin123!"
+INITIAL_ADMIN_PASSWORD_ENV = "INITIAL_ADMIN_PASSWORD"
+
+
+def get_initial_admin_password() -> str:
+    password = os.getenv(INITIAL_ADMIN_PASSWORD_ENV)
+    if password:
+        return password
+
+    # Local development default only. Set INITIAL_ADMIN_PASSWORD outside local dev.
+    print(
+        "WARNING: using local-dev default admin password. "
+        f"Set {INITIAL_ADMIN_PASSWORD_ENV} for non-local environments.",
+    )
+    return DEFAULT_INITIAL_ADMIN_PASSWORD
+
 
 def get_or_create_admin_role(db: Session) -> Role:
     role = db.scalar(select(Role).where(Role.code == "admin"))
@@ -56,7 +74,7 @@ def get_or_create_admin_user(db: Session, role: Role) -> User:
     if user is None:
         user = User(
             username="admin",
-            password_hash=hash_password("Admin123!"),
+            password_hash=hash_password(get_initial_admin_password()),
             nickname="管理员",
             status="enabled",
         )
@@ -70,7 +88,7 @@ def get_or_create_admin_user(db: Session, role: Role) -> User:
 
 def seed_menus(db: Session, role: Role) -> None:
     for index, item in enumerate(MENU_SEEDS):
-        menu = db.scalar(select(Menu).where(Menu.title == item["title"]))
+        menu = get_seed_menu(db, item)
         if menu is None:
             menu = Menu(
                 type="menu",
@@ -87,6 +105,14 @@ def seed_menus(db: Session, role: Role) -> None:
 
         if role not in menu.roles:
             menu.roles.append(role)
+
+
+def get_seed_menu(db: Session, item: dict[str, str]) -> Menu | None:
+    permission = item.get("permission")
+    if permission:
+        return db.scalar(select(Menu).where(Menu.permission == permission))
+
+    return db.scalar(select(Menu).where(Menu.path == item["path"]))
 
 
 def seed(db: Session) -> None:
