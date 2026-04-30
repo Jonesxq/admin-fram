@@ -26,7 +26,10 @@ def _strip_validation_input(value: object) -> object:
 @app.middleware("http")
 async def request_id_middleware(request: Request, call_next):
     request.state.request_id = get_request_id(request)
-    response = await call_next(request)
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        response = unhandled_error_handler(request, exc)
     response.headers["X-Request-ID"] = request.state.request_id
     return response
 
@@ -56,6 +59,22 @@ def validation_error_handler(request: Request, exc: RequestValidationError) -> J
             "details": _strip_validation_input(exc.errors()),
             "request_id": get_request_id(request),
         }),
+    )
+
+
+@app.exception_handler(Exception)
+def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
+    request_id = get_request_id(request)
+    return JSONResponse(
+        status_code=500,
+        content=jsonable_encoder({
+            "code": 100500,
+            "message": "服务端错误",
+            "data": None,
+            "details": None,
+            "request_id": request_id,
+        }),
+        headers={"X-Request-ID": request_id},
     )
 
 

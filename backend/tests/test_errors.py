@@ -73,3 +73,26 @@ def test_validation_error_details_strip_input_fields(client: TestClient) -> None
     assert response.json()["details"]
     assert not _has_input_field(response.json()["details"])
     assert response.json()["request_id"] == response.headers["X-Request-ID"]
+
+
+def test_unhandled_error_uses_standard_500_response(client: TestClient) -> None:
+    router = APIRouter()
+
+    @router.get("/test-unhandled-error")
+    def raise_unhandled_error() -> None:
+        raise RuntimeError("unexpected")
+
+    response = _get_with_temporary_router(
+        client,
+        router,
+        "/api/v1/test-unhandled-error",
+        headers={"x-request-id": "rid-500"},
+    )
+
+    assert response.status_code == 500
+    assert response.json()["code"] == 100500
+    assert response.json()["message"] == "服务端错误"
+    assert response.json()["data"] is None
+    assert response.json()["details"] is None
+    assert response.json()["request_id"] == "rid-500"
+    assert response.headers["X-Request-ID"] == "rid-500"
