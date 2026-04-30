@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import bcrypt
 import pytest
@@ -30,6 +31,17 @@ SYSTEM_WRITE_PERMISSIONS = {
     for action in ("create", "update", "delete")
 }
 SYSTEM_PERMISSIONS = SYSTEM_LIST_PERMISSIONS | SYSTEM_WRITE_PERMISSIONS
+
+
+@pytest.fixture(autouse=True)
+def isolate_seed_settings(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "app.seed.settings",
+        SimpleNamespace(
+            initial_admin_password="",
+            allow_default_admin_password=False,
+        ),
+    )
 
 
 def test_system_tables_are_registered() -> None:

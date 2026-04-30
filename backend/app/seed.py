@@ -3,6 +3,7 @@ import os
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import SessionLocal
 from app.core.security import hash_password
 from app.models.system import Menu, Role, User
@@ -69,12 +70,20 @@ TRUTHY_ENV_VALUES = {"1", "true", "yes", "on"}
 
 
 def get_initial_admin_password() -> str:
-    password = os.getenv(INITIAL_ADMIN_PASSWORD_ENV, "").strip()
+    password = os.getenv(INITIAL_ADMIN_PASSWORD_ENV)
+    if password is None:
+        password = settings.initial_admin_password
+    password = password.strip()
     if password and password != DEFAULT_INITIAL_ADMIN_PASSWORD:
         return password
 
-    allow_default = os.getenv(ALLOW_DEFAULT_ADMIN_PASSWORD_ENV, "").strip().lower()
-    if allow_default in TRUTHY_ENV_VALUES:
+    allow_default_env = os.getenv(ALLOW_DEFAULT_ADMIN_PASSWORD_ENV)
+    allow_default = (
+        allow_default_env.strip().lower() in TRUTHY_ENV_VALUES
+        if allow_default_env is not None
+        else settings.allow_default_admin_password
+    )
+    if allow_default:
         print(
             "WARNING: using local-development-only default admin password. "
             f"Set a strong {INITIAL_ADMIN_PASSWORD_ENV} outside local development.",
