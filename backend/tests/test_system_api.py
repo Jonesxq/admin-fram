@@ -81,6 +81,59 @@ def test_system_users_returns_page_without_password_hash(system_client: TestClie
     assert all("password_hash" not in item for item in data["items"])
 
 
+def test_create_update_delete_user(system_client: TestClient) -> None:
+    headers = auth_headers(system_client)
+
+    create_response = system_client.post(
+        "/api/v1/system/users",
+        headers=headers,
+        json={
+            "username": "demo",
+            "password": "Demo123!",
+            "nickname": "Demo",
+            "email": "demo@example.com",
+            "mobile": "13800000000",
+            "status": "enabled",
+        },
+    )
+
+    assert create_response.status_code == 200
+    created = create_response.json()["data"]
+    assert created["username"] == "demo"
+    assert created["nickname"] == "Demo"
+    assert "password_hash" not in created
+
+    user_id = created["id"]
+    update_response = system_client.put(
+        f"/api/v1/system/users/{user_id}",
+        headers=headers,
+        json={
+            "nickname": "Demo Updated",
+            "status": "disabled",
+        },
+    )
+
+    assert update_response.status_code == 200
+    updated = update_response.json()["data"]
+    assert updated["id"] == user_id
+    assert updated["nickname"] == "Demo Updated"
+    assert updated["status"] == "disabled"
+    assert "password_hash" not in updated
+
+    delete_response = system_client.delete(
+        f"/api/v1/system/users/{user_id}",
+        headers=headers,
+    )
+
+    assert delete_response.status_code == 200
+    list_response = system_client.get(
+        "/api/v1/system/users",
+        headers=headers,
+    )
+    usernames = [item["username"] for item in list_response.json()["data"]["items"]]
+    assert "demo" not in usernames
+
+
 def test_system_configs_do_not_expose_raw_value(system_client: TestClient) -> None:
     response = system_client.get(
         "/api/v1/system/configs",
@@ -155,6 +208,9 @@ def seed_system(db: Session) -> None:
         Menu(type="button", title=title, permission=permission, status="enabled")
         for title, permission in [
             ("用户查询", "system:user:list"),
+            ("用户创建", "system:user:create"),
+            ("用户修改", "system:user:update"),
+            ("用户删除", "system:user:delete"),
             ("角色查询", "system:role:list"),
             ("菜单查询", "system:menu:list"),
             ("部门查询", "system:dept:list"),

@@ -1,11 +1,24 @@
 from collections.abc import Iterable
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import func, inspect, select
-from sqlalchemy.sql.elements import UnaryExpression
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.elements import UnaryExpression
 
-from app.models.system import Config, Dept, DictType, LoginLog, Menu, OperationLog, Post, Role, User
+from app.core.errors import AppError
+from app.models.system import (
+    Config,
+    Dept,
+    DictItem,
+    DictType,
+    LoginLog,
+    Menu,
+    OperationLog,
+    Post,
+    Role,
+    User,
+)
 from app.schemas.common import PageResponse
 
 LIST_FIELDS = {
@@ -35,6 +48,7 @@ LIST_FIELDS = {
     Dept: ("id", "parent_id", "ancestors", "name", "sort", "status"),
     Post: ("id", "code", "name", "sort", "status"),
     DictType: ("id", "code", "name", "status"),
+    DictItem: ("id", "dict_type_id", "value", "label", "sort", "status"),
     Config: ("id", "key", "name", "remark"),
     LoginLog: (
         "id",
@@ -58,6 +72,33 @@ LIST_FIELDS = {
         "created_at",
     ),
 }
+
+
+def create_item(db: Session, model: type, values: dict[str, Any]) -> Any:
+    item = model(**values)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+def update_item(db: Session, model: type, item_id: int, values: dict[str, Any]) -> Any:
+    item = get_active_item(db, model, item_id)
+    for key, value in values.items():
+        setattr(item, key, value)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+def soft_delete_item(db: Session, model: type, item_id: int) -> Any:
+    item = get_active_item(db, model, item_id)
+    if hasattr(model, "deleted_at"):
+        item.deleted_at = datetime.now(timezone.utc)
+    else:
+        db.delete(item)
+    db.commit()
+    return item
 
 
 def page_query(
@@ -97,3 +138,17 @@ def to_dict(instance: object, fields: Iterable[str]) -> dict[str, Any]:
         for field in fields
         if field in model_fields
     }
+
+
+def to_safe_dict(instance: object) -> dict[str, Any]:
+    return to_dict(instance, LIST_FIELDS[type(instance)])
+
+
+def get_active_item(db: Session, model: type, item_id: int) -> Any:
+    statement = select(model).where(model.id == item_id)
+    if hasattr(model, "deleted_at"):
+        statement = statement.where(model.deleted_at.is_(None))
+    item = db.scalar(statement)
+    if item is None:
+        raise AppError(code=100404, message="资源不存在", status_code=404)
+    return item
