@@ -47,7 +47,7 @@ admin / Admin123!
 docker compose up -d mysql
 ```
 
-后端安装、迁移、seed 和开发服务：
+后端安装、迁移、seed 和开发服务，从仓库根目录执行：
 
 ```powershell
 cd backend
@@ -59,7 +59,7 @@ python -m app.seed
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-前端开发服务：
+前端开发服务，在另一个 PowerShell 窗口从仓库根目录执行：
 
 ```powershell
 cd frontend
@@ -67,14 +67,14 @@ npm install
 npm run dev
 ```
 
-验证命令：
+验证命令，从仓库根目录执行：
 
 ```powershell
 docker compose config
 cd backend
 python -m pytest -v
 python -m ruff check .
-cd ../frontend
+cd ..\frontend
 npm test
 npm run typecheck
 npm run build

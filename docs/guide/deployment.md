@@ -7,7 +7,7 @@ This guide summarizes the pieces required to deploy Open Admin outside local dev
 Set the backend API base URL before building:
 
 ```env
-VITE_API_BASE_URL=https://api.example.com/api/v1
+VITE_API_BASE_URL=/api/v1
 ```
 
 Build the static assets:
@@ -19,6 +19,8 @@ npm run build
 ```
 
 Deploy `frontend/dist/` to a static web server or CDN. Configure history fallback to `index.html` because the app uses Vue Router history mode.
+
+The current recommended deployment is same-origin: serve the frontend and reverse proxy `/api/v1` to the backend ASGI service from the same public origin.
 
 ## Backend ASGI Runtime
 
@@ -77,5 +79,5 @@ For production bootstrap, set a strong `INITIAL_ADMIN_PASSWORD` before running s
 - Keep `.env` files out of source control and deployment artifacts.
 - Restrict database network access to the backend runtime.
 - Serve the frontend and backend over HTTPS.
-- Configure CORS and reverse proxy rules for your deployment topology.
+- Prefer same-origin frontend and API access through a reverse proxy. If you deploy the frontend and API on different origins, add explicit CORS middleware configuration in the backend code before release; the current backend does not expose a documented environment-only CORS switch.
 - Run `python -m pytest -v`, `python -m ruff check .`, `npm test`, `npm run typecheck`, and `npm run build` in CI before release.

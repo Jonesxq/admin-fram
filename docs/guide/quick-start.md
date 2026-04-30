@@ -13,7 +13,7 @@ This guide starts Open Admin locally on Windows PowerShell with MySQL, FastAPI, 
 
 Run from the repository root:
 
-```bash
+```powershell
 docker compose up -d mysql
 ```
 
@@ -25,7 +25,7 @@ Create `backend/.env` from the example:
 Copy-Item backend\.env.example backend\.env
 ```
 
-For the local demo account, make sure `backend/.env` contains these values:
+For the local demo account, temporarily edit `backend/.env` so it contains these values:
 
 ```env
 DATABASE_URL=mysql+pymysql://open_admin:open_admin_password@127.0.0.1:3306/open_admin
@@ -40,7 +40,7 @@ ALLOW_DEFAULT_ADMIN_PASSWORD=1
 
 Run these commands in Windows PowerShell:
 
-```bash
+```powershell
 cd backend
 python -m venv .venv
 .venv\Scripts\Activate.ps1
@@ -68,7 +68,7 @@ VITE_API_BASE_URL=http://localhost:8000/api/v1
 
 ## 5. Install and Run Frontend
 
-```bash
+```powershell
 cd frontend
 npm install
 npm run dev
@@ -84,6 +84,12 @@ admin / Admin123!
 
 This account is for local development only. Non-local deployments must use a different password before running the seed command.
 
+## Re-running Setup
+
+`alembic upgrade head` is safe to run repeatedly. If the database is already at the latest migration, Alembic leaves it unchanged.
+
+`python -m app.seed` upserts the base admin role, menu records, button permission records, and role-permission bindings. If the `admin` user already exists, seed keeps that user and does not reset the admin password.
+
 ## Useful Checks
 
 ```powershell
@@ -91,7 +97,7 @@ docker compose config
 cd backend
 python -m pytest -v
 python -m ruff check .
-cd ../frontend
+cd ..\frontend
 npm test
 npm run typecheck
 npm run build
