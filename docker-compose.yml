@@ -4,20 +4,20 @@ services:
     container_name: open-admin-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_DATABASE: open_admin
-      MYSQL_USER: open_admin
-      MYSQL_PASSWORD: open_admin_password
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-open_admin}
+      MYSQL_USER: ${MYSQL_USER:-open_admin}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-open_admin_password}
       TZ: Asia/Shanghai
     ports:
-      - "3306:3306"
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uopen_admin", "-popen_admin_password"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$${MYSQL_USER} -p$${MYSQL_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 10
