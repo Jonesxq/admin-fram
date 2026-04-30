@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { Plus } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-
-import { listMenus } from '@/api/system'
+import {
+  createMenu,
+  deleteMenu,
+  listMenus,
+  updateMenu,
+  type MenuPayload,
+  type MenuUpdatePayload
+} from '@/api/system'
 import type { PageTableColumn } from '@/components/PageTable.vue'
-import PageTable from '@/components/PageTable.vue'
-import PermissionButton from '@/components/PermissionButton.vue'
+import SystemCrudPage, { type CrudField } from '@/components/SystemCrudPage.vue'
 
 const columns: PageTableColumn[] = [
   { prop: 'title', label: '菜单名称', minWidth: 160 },
@@ -18,32 +21,72 @@ const columns: PageTableColumn[] = [
   { prop: 'status', label: '状态', width: 100, align: 'center', slot: 'status' }
 ]
 
-function showPendingMessage() {
-  ElMessage.info('新增菜单写接口将在后续任务接入')
+const fields: CrudField[] = [
+  {
+    key: 'type',
+    label: '类型',
+    type: 'select',
+    defaultValue: 'menu',
+    required: true,
+    options: [
+      { label: '目录', value: 'catalog' },
+      { label: '菜单', value: 'menu' },
+      { label: '按钮', value: 'button' }
+    ]
+  },
+  { key: 'title', label: '菜单名称', required: true },
+  {
+    key: 'parent_id',
+    label: '上级ID',
+    type: 'number',
+    defaultValue: null,
+    emptyAsNull: true,
+    omitEmptyOnCreate: true,
+    omitEmptyOnUpdate: true,
+    min: 1
+  },
+  { key: 'path', label: '路由路径', omitEmptyOnCreate: true, omitEmptyOnUpdate: true },
+  { key: 'component', label: '组件', omitEmptyOnCreate: true, omitEmptyOnUpdate: true },
+  { key: 'permission', label: '权限标识', omitEmptyOnCreate: true, omitEmptyOnUpdate: true },
+  { key: 'icon', label: '图标', omitEmptyOnCreate: true, omitEmptyOnUpdate: true },
+  { key: 'sort', label: '排序', type: 'number', defaultValue: 0 },
+  {
+    key: 'status',
+    label: '状态',
+    type: 'select',
+    defaultValue: 'enabled',
+    required: true,
+    options: [
+      { label: '启用', value: 'enabled' },
+      { label: '停用', value: 'disabled' }
+    ]
+  }
+]
+
+function create(payload: Record<string, unknown>) {
+  return createMenu(payload as unknown as MenuPayload)
+}
+
+function update(id: number, payload: Record<string, unknown>) {
+  return updateMenu(id, payload as unknown as MenuUpdatePayload)
 }
 </script>
 
 <template>
-  <div class="oa-page">
-    <header class="oa-page__header">
-      <div>
-        <h1 class="oa-page__title">菜单管理</h1>
-        <p class="oa-page__desc">维护菜单、按钮权限和前端组件映射。</p>
-      </div>
-      <PermissionButton permission="system:menu:create" :icon="Plus" @click="showPendingMessage">
-        新增菜单
-      </PermissionButton>
-    </header>
-
-    <PageTable :columns="columns" :loader="listMenus" row-key="id" :searchable="false">
-      <template #type="{ row }">
-        <ElTag effect="plain">{{ row.type }}</ElTag>
-      </template>
-      <template #status="{ row }">
-        <ElTag :type="String(row.status) === '1' ? 'success' : 'info'" effect="light">
-          {{ String(row.status) === '1' ? '启用' : '停用' }}
-        </ElTag>
-      </template>
-    </PageTable>
-  </div>
+  <SystemCrudPage
+    title="菜单管理"
+    description="维护菜单、按钮权限和前端组件映射。"
+    create-button-text="新增菜单"
+    :columns="columns"
+    :loader="listMenus"
+    :create="create"
+    :update="update"
+    :remove="deleteMenu"
+    :fields="fields"
+    :permissions="{
+      create: 'system:menu:create',
+      update: 'system:menu:update',
+      delete: 'system:menu:delete'
+    }"
+  />
 </template>

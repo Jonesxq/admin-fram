@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import func, inspect, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import UnaryExpression
 
@@ -73,11 +74,19 @@ LIST_FIELDS = {
     ),
 }
 
+UNIQUE_RELEASE_FIELDS = {
+    User: {"username": 64},
+    Role: {"code": 64},
+    Post: {"code": 64},
+    DictType: {"code": 64},
+    Config: {"key": 128},
+}
+
 
 def create_item(db: Session, model: type, values: dict[str, Any]) -> Any:
     item = model(**values)
     db.add(item)
-    db.flush()
+    flush_or_conflict(db)
     return item
 
 
@@ -85,7 +94,7 @@ def update_item(db: Session, model: type, item_id: int, values: dict[str, Any]) 
     item = get_active_item(db, model, item_id)
     for key, value in values.items():
         setattr(item, key, value)
-    db.flush()
+    flush_or_conflict(db)
     return item
 
 
@@ -93,9 +102,10 @@ def soft_delete_item(db: Session, model: type, item_id: int) -> Any:
     item = get_active_item(db, model, item_id)
     if hasattr(model, "deleted_at"):
         item.deleted_at = datetime.now(timezone.utc)
+        release_unique_values(model, item)
     else:
         db.delete(item)
-    db.flush()
+    flush_or_conflict(db)
     return item
 
 
@@ -150,3 +160,21 @@ def get_active_item(db: Session, model: type, item_id: int) -> Any:
     if item is None:
         raise AppError(code=100404, message="资源不存在", status_code=404)
     return item
+
+
+def flush_or_conflict(db: Session) -> None:
+    try:
+        db.flush()
+    except IntegrityError as exc:
+        raise AppError(code=100409, message="资源已存在", status_code=409) from exc
+
+
+def release_unique_values(model: type, item: Any) -> None:
+    for field, max_length in UNIQUE_RELEASE_FIELDS.get(model, {}).items():
+        value = getattr(item, field, None)
+        if not value:
+            continue
+
+        suffix = f"__deleted_{item.id}"
+        prefix_length = max(max_length - len(suffix), 0)
+        setattr(item, field, f"{value[:prefix_length]}{suffix}"[-max_length:])

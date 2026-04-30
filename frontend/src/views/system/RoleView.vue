@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { Plus } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-
-import { listRoles } from '@/api/system'
+import {
+  createRole,
+  deleteRole,
+  listRoles,
+  updateRole,
+  type RolePayload,
+  type RoleUpdatePayload
+} from '@/api/system'
 import type { PageTableColumn } from '@/components/PageTable.vue'
-import PageTable from '@/components/PageTable.vue'
-import PermissionButton from '@/components/PermissionButton.vue'
+import SystemCrudPage, { type CrudField } from '@/components/SystemCrudPage.vue'
 
 const columns: PageTableColumn[] = [
   { type: 'index', label: '#', width: 58, align: 'center' },
@@ -16,29 +19,59 @@ const columns: PageTableColumn[] = [
   { prop: 'status', label: '状态', width: 100, align: 'center', slot: 'status' }
 ]
 
-function showPendingMessage() {
-  ElMessage.info('新增角色写接口将在后续任务接入')
+const fields: CrudField[] = [
+  { key: 'code', label: '角色编码', required: true },
+  { key: 'name', label: '角色名称', required: true },
+  {
+    key: 'data_scope',
+    label: '数据范围',
+    type: 'select',
+    defaultValue: 'all',
+    required: true,
+    options: [
+      { label: '全部数据', value: 'all' },
+      { label: '本部门', value: 'dept' },
+      { label: '本人数据', value: 'self' }
+    ]
+  },
+  { key: 'sort', label: '排序', type: 'number', defaultValue: 0 },
+  {
+    key: 'status',
+    label: '状态',
+    type: 'select',
+    defaultValue: 'enabled',
+    required: true,
+    options: [
+      { label: '启用', value: 'enabled' },
+      { label: '停用', value: 'disabled' }
+    ]
+  }
+]
+
+function create(payload: Record<string, unknown>) {
+  return createRole(payload as unknown as RolePayload)
+}
+
+function update(id: number, payload: Record<string, unknown>) {
+  return updateRole(id, payload as unknown as RoleUpdatePayload)
 }
 </script>
 
 <template>
-  <div class="oa-page">
-    <header class="oa-page__header">
-      <div>
-        <h1 class="oa-page__title">角色管理</h1>
-        <p class="oa-page__desc">查看角色编码、数据权限范围和启停状态。</p>
-      </div>
-      <PermissionButton permission="system:role:create" :icon="Plus" @click="showPendingMessage">
-        新增角色
-      </PermissionButton>
-    </header>
-
-    <PageTable :columns="columns" :loader="listRoles" row-key="id" :searchable="false">
-      <template #status="{ row }">
-        <ElTag :type="String(row.status) === '1' ? 'success' : 'info'" effect="light">
-          {{ String(row.status) === '1' ? '启用' : '停用' }}
-        </ElTag>
-      </template>
-    </PageTable>
-  </div>
+  <SystemCrudPage
+    title="角色管理"
+    description="维护角色编码、数据权限范围和启停状态。"
+    create-button-text="新增角色"
+    :columns="columns"
+    :loader="listRoles"
+    :create="create"
+    :update="update"
+    :remove="deleteRole"
+    :fields="fields"
+    :permissions="{
+      create: 'system:role:create',
+      update: 'system:role:update',
+      delete: 'system:role:delete'
+    }"
+  />
 </template>

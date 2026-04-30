@@ -101,6 +101,10 @@ function formatCell(column: PageTableColumn, row: unknown) {
 onMounted(() => {
   void loadData()
 })
+
+defineExpose({
+  reload: loadData
+})
 </script>
 
 <template>

@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { Plus } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-
-import { listDictTypes } from '@/api/system'
+import {
+  createDictType,
+  deleteDictType,
+  listDictTypes,
+  updateDictType,
+  type DictTypePayload,
+  type DictTypeUpdatePayload
+} from '@/api/system'
 import type { PageTableColumn } from '@/components/PageTable.vue'
-import PageTable from '@/components/PageTable.vue'
-import PermissionButton from '@/components/PermissionButton.vue'
+import SystemCrudPage, { type CrudField } from '@/components/SystemCrudPage.vue'
 
 const columns: PageTableColumn[] = [
   { type: 'index', label: '#', width: 58, align: 'center' },
@@ -14,29 +17,46 @@ const columns: PageTableColumn[] = [
   { prop: 'status', label: '状态', width: 100, align: 'center', slot: 'status' }
 ]
 
-function showPendingMessage() {
-  ElMessage.info('新增字典写接口将在后续任务接入')
+const fields: CrudField[] = [
+  { key: 'code', label: '字典编码', required: true },
+  { key: 'name', label: '字典名称', required: true },
+  {
+    key: 'status',
+    label: '状态',
+    type: 'select',
+    defaultValue: 'enabled',
+    required: true,
+    options: [
+      { label: '启用', value: 'enabled' },
+      { label: '停用', value: 'disabled' }
+    ]
+  }
+]
+
+function create(payload: Record<string, unknown>) {
+  return createDictType(payload as unknown as DictTypePayload)
+}
+
+function update(id: number, payload: Record<string, unknown>) {
+  return updateDictType(id, payload as unknown as DictTypeUpdatePayload)
 }
 </script>
 
 <template>
-  <div class="oa-page">
-    <header class="oa-page__header">
-      <div>
-        <h1 class="oa-page__title">字典管理</h1>
-        <p class="oa-page__desc">维护系统字典类型，供业务表单和状态展示复用。</p>
-      </div>
-      <PermissionButton permission="system:dict:create" :icon="Plus" @click="showPendingMessage">
-        新增字典
-      </PermissionButton>
-    </header>
-
-    <PageTable :columns="columns" :loader="listDictTypes" row-key="id" :searchable="false">
-      <template #status="{ row }">
-        <ElTag :type="String(row.status) === '1' ? 'success' : 'info'" effect="light">
-          {{ String(row.status) === '1' ? '启用' : '停用' }}
-        </ElTag>
-      </template>
-    </PageTable>
-  </div>
+  <SystemCrudPage
+    title="字典管理"
+    description="维护系统字典类型，供业务表单和状态展示复用。"
+    create-button-text="新增字典"
+    :columns="columns"
+    :loader="listDictTypes"
+    :create="create"
+    :update="update"
+    :remove="deleteDictType"
+    :fields="fields"
+    :permissions="{
+      create: 'system:dict:create',
+      update: 'system:dict:update',
+      delete: 'system:dict:delete'
+    }"
+  />
 </template>

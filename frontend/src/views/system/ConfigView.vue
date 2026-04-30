@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { Plus } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-
-import { listConfigs } from '@/api/system'
+import {
+  createConfig,
+  deleteConfig,
+  listConfigs,
+  updateConfig,
+  type ConfigCreatePayload,
+  type ConfigUpdatePayload
+} from '@/api/system'
 import type { PageTableColumn } from '@/components/PageTable.vue'
-import PageTable from '@/components/PageTable.vue'
-import PermissionButton from '@/components/PermissionButton.vue'
+import SystemCrudPage, { type CrudField } from '@/components/SystemCrudPage.vue'
 
 const columns: PageTableColumn[] = [
   { type: 'index', label: '#', width: 58, align: 'center' },
@@ -14,23 +17,45 @@ const columns: PageTableColumn[] = [
   { prop: 'remark', label: '备注', minWidth: 260 }
 ]
 
-function showPendingMessage() {
-  ElMessage.info('新增参数写接口将在后续任务接入')
+const fields: CrudField[] = [
+  { key: 'key', label: '参数键名', required: true },
+  {
+    key: 'value',
+    label: '参数值',
+    type: 'textarea',
+    requiredOnCreate: true,
+    requiredOnUpdate: false,
+    omitEmptyOnUpdate: true,
+    placeholder: '编辑时留空则不更新参数值'
+  },
+  { key: 'name', label: '参数名称', required: true },
+  { key: 'remark', label: '备注', type: 'textarea', omitEmptyOnCreate: true, omitEmptyOnUpdate: true }
+]
+
+function create(payload: Record<string, unknown>) {
+  return createConfig(payload as unknown as ConfigCreatePayload)
+}
+
+function update(id: number, payload: Record<string, unknown>) {
+  return updateConfig(id, payload as unknown as ConfigUpdatePayload)
 }
 </script>
 
 <template>
-  <div class="oa-page">
-    <header class="oa-page__header">
-      <div>
-        <h1 class="oa-page__title">参数配置</h1>
-        <p class="oa-page__desc">集中查看系统运行参数和业务配置说明。</p>
-      </div>
-      <PermissionButton permission="system:config:create" :icon="Plus" @click="showPendingMessage">
-        新增参数
-      </PermissionButton>
-    </header>
-
-    <PageTable :columns="columns" :loader="listConfigs" row-key="id" :searchable="false" />
-  </div>
+  <SystemCrudPage
+    title="参数配置"
+    description="集中维护系统运行参数和业务配置说明。"
+    create-button-text="新增参数"
+    :columns="columns"
+    :loader="listConfigs"
+    :create="create"
+    :update="update"
+    :remove="deleteConfig"
+    :fields="fields"
+    :permissions="{
+      create: 'system:config:create',
+      update: 'system:config:update',
+      delete: 'system:config:delete'
+    }"
+  />
 </template>

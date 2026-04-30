@@ -49,7 +49,7 @@ def system_client() -> Generator[TestClient, None, None]:
 
     app.dependency_overrides[get_db] = override_get_db
     try:
-        with TestClient(app) as test_client:
+        with TestClient(app, raise_server_exceptions=False) as test_client:
             yield test_client
     finally:
         app.dependency_overrides.pop(get_db, None)
@@ -161,6 +161,64 @@ def test_create_update_delete_user(system_client: TestClient) -> None:
     )
     assert delete_deleted_response.status_code == 404
     assert delete_deleted_response.json()["code"] == 100404
+
+
+def test_deleted_user_username_can_be_recreated(system_client: TestClient) -> None:
+    headers = auth_headers(system_client)
+
+    create_response = system_client.post(
+        "/api/v1/system/users",
+        headers=headers,
+        json={
+            "username": "recreate-demo",
+            "password": "Demo123!",
+            "nickname": "Demo",
+            "status": "enabled",
+        },
+    )
+    assert create_response.status_code == 200
+    user_id = create_response.json()["data"]["id"]
+
+    delete_response = system_client.delete(
+        f"/api/v1/system/users/{user_id}",
+        headers=headers,
+    )
+    assert delete_response.status_code == 200
+
+    recreate_response = system_client.post(
+        "/api/v1/system/users",
+        headers=headers,
+        json={
+            "username": "recreate-demo",
+            "password": "Demo123!",
+            "nickname": "Demo Recreated",
+            "status": "enabled",
+        },
+    )
+
+    assert recreate_response.status_code == 200
+    recreated = recreate_response.json()["data"]
+    assert recreated["username"] == "recreate-demo"
+    assert recreated["id"] != user_id
+
+
+def test_active_duplicate_user_returns_conflict(system_client: TestClient) -> None:
+    headers = auth_headers(system_client)
+
+    response = system_client.post(
+        "/api/v1/system/users",
+        headers=headers,
+        json={
+            "username": "admin",
+            "password": "Demo123!",
+            "nickname": "Duplicate Admin",
+            "status": "enabled",
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.json()["code"] == 100409
+    assert response.json()["message"] == "资源已存在"
 
 
 def test_create_user_rolls_back_when_operation_log_fails(
