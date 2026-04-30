@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.encoders import jsonable_encoder
@@ -7,6 +9,8 @@ from app.api.v1.router import router as api_v1_router
 from app.core.config import settings
 from app.core.errors import AppError
 from app.core.logging import get_request_id
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title=settings.app_name)
 
@@ -65,6 +69,11 @@ def validation_error_handler(request: Request, exc: RequestValidationError) -> J
 @app.exception_handler(Exception)
 def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
     request_id = get_request_id(request)
+    logger.exception(
+        "Unhandled request error",
+        extra={"request_id": request_id},
+        exc_info=(type(exc), exc, exc.__traceback__),
+    )
     return JSONResponse(
         status_code=500,
         content=jsonable_encoder({

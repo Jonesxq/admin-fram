@@ -1,5 +1,8 @@
+import logging
+
 from fastapi import APIRouter
 from fastapi.testclient import TestClient
+from pytest import LogCaptureFixture
 
 from app.core.errors import AppError
 from app.main import app
@@ -75,13 +78,17 @@ def test_validation_error_details_strip_input_fields(client: TestClient) -> None
     assert response.json()["request_id"] == response.headers["X-Request-ID"]
 
 
-def test_unhandled_error_uses_standard_500_response(client: TestClient) -> None:
+def test_unhandled_error_uses_standard_500_response(
+    client: TestClient,
+    caplog: LogCaptureFixture,
+) -> None:
     router = APIRouter()
 
     @router.get("/test-unhandled-error")
     def raise_unhandled_error() -> None:
         raise RuntimeError("unexpected")
 
+    caplog.set_level(logging.ERROR)
     response = _get_with_temporary_router(
         client,
         router,
@@ -96,3 +103,7 @@ def test_unhandled_error_uses_standard_500_response(client: TestClient) -> None:
     assert response.json()["details"] is None
     assert response.json()["request_id"] == "rid-500"
     assert response.headers["X-Request-ID"] == "rid-500"
+    assert any(
+        record.exc_info and "rid-500" == getattr(record, "request_id", None)
+        for record in caplog.records
+    )
