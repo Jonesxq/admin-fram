@@ -35,7 +35,7 @@ function showPendingMessage() {
       </PermissionButton>
     </header>
 
-    <PageTable :columns="columns" :loader="listMenus" row-key="id">
+    <PageTable :columns="columns" :loader="listMenus" row-key="id" :searchable="false">
       <template #type="{ row }">
         <ElTag effect="plain">{{ row.type }}</ElTag>
       </template>

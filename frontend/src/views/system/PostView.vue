@@ -32,7 +32,7 @@ function showPendingMessage() {
       </PermissionButton>
     </header>
 
-    <PageTable :columns="columns" :loader="listPosts" row-key="id">
+    <PageTable :columns="columns" :loader="listPosts" row-key="id" :searchable="false">
       <template #status="{ row }">
         <ElTag :type="String(row.status) === '1' ? 'success' : 'info'" effect="light">
           {{ String(row.status) === '1' ? '启用' : '停用' }}

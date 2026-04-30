@@ -106,9 +106,23 @@ export const staticRoutes: RouteRecordRaw[] = [
         }
       },
       {
+        path: '/monitor/login-logs',
+        redirect: '/system/login-logs',
+        meta: {
+          title: '登录日志'
+        }
+      },
+      {
         path: '/system/operation-logs',
         name: 'SystemOperationLogs',
         component: OperationLogView,
+        meta: {
+          title: '操作日志'
+        }
+      },
+      {
+        path: '/monitor/operation-logs',
+        redirect: '/system/operation-logs',
         meta: {
           title: '操作日志'
         }

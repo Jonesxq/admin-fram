@@ -31,6 +31,6 @@ function showPendingMessage() {
       </PermissionButton>
     </header>
 
-    <PageTable :columns="columns" :loader="listConfigs" row-key="id" />
+    <PageTable :columns="columns" :loader="listConfigs" row-key="id" :searchable="false" />
   </div>
 </template>

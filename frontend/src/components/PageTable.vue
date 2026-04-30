@@ -22,9 +22,11 @@ const props = withDefaults(
     loader: (params: PageParams) => Promise<PageResult<unknown>>
     rowKey: string
     keywordPlaceholder?: string
+    searchable?: boolean
   }>(),
   {
-    keywordPlaceholder: '请输入关键词'
+    keywordPlaceholder: '请输入关键词',
+    searchable: true
   }
 )
 
@@ -34,8 +36,12 @@ const page = ref(1)
 const pageSize = ref(10)
 const keyword = ref('')
 const loading = ref(false)
+const latestRequestId = ref(0)
 
 async function loadData() {
+  const requestId = latestRequestId.value + 1
+
+  latestRequestId.value = requestId
   loading.value = true
 
   try {
@@ -45,14 +51,22 @@ async function loadData() {
       keyword: keyword.value.trim() || undefined
     })
 
+    if (requestId !== latestRequestId.value) {
+      return
+    }
+
     rows.value = result.items
     total.value = result.total
     page.value = result.page
     pageSize.value = result.page_size
   } catch {
-    ElMessage.error('列表加载失败，请稍后重试')
+    if (requestId === latestRequestId.value) {
+      ElMessage.error('列表加载失败，请稍后重试')
+    }
   } finally {
-    loading.value = false
+    if (requestId === latestRequestId.value) {
+      loading.value = false
+    }
   }
 }
 
@@ -93,6 +107,7 @@ onMounted(() => {
   <section class="page-table">
     <div class="page-table__toolbar">
       <ElInput
+        v-if="searchable"
         v-model="keyword"
         clearable
         class="page-table__search"
@@ -100,7 +115,7 @@ onMounted(() => {
         @clear="handleSearch"
         @keyup.enter="handleSearch"
       />
-      <ElButton type="primary" @click="handleSearch">查询</ElButton>
+      <ElButton v-if="searchable" type="primary" @click="handleSearch">查询</ElButton>
       <ElButton @click="handleRefresh">刷新</ElButton>
       <div class="page-table__actions">
         <slot name="actions" />
