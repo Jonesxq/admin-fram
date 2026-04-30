@@ -1,2 +1,12 @@
 .superpowers/
 .worktrees/
+.env
+*.local
+node_modules/
+dist/
+coverage/
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.pyc
