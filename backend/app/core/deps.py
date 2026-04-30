@@ -3,6 +3,7 @@ from typing import Annotated
 import jwt
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -29,7 +30,11 @@ def get_current_user(
     if not subject:
         raise unauthorized_error()
 
-    user = db.get(User, int(subject)) if str(subject).isdigit() else None
+    user = (
+        db.scalar(select(User).where(User.id == int(subject), User.deleted_at.is_(None)))
+        if str(subject).isdigit()
+        else None
+    )
     if user is None or user.status != "enabled":
         raise unauthorized_error()
 

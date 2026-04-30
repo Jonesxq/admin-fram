@@ -8,7 +8,12 @@ from app.schemas.auth import TokenResponse
 
 
 def authenticate(db: Session, username: str, password: str) -> User:
-    user = db.scalar(select(User).where(User.username == username))
+    user = db.scalar(
+        select(User).where(
+            User.username == username,
+            User.deleted_at.is_(None),
+        ),
+    )
     if user is None or user.status != "enabled":
         raise invalid_credentials_error()
 

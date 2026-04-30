@@ -157,6 +157,16 @@ def test_me_with_soft_deleted_user_token_returns_401(auth_client: TestClient) ->
     assert_unauthorized(response)
 
 
+def test_login_with_soft_deleted_user_returns_401(auth_client: TestClient) -> None:
+    response = auth_client.post(
+        "/api/v1/auth/login",
+        json={"username": "deleted", "password": "Admin123!"},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["code"] == 100401
+
+
 def test_login_with_malformed_stored_hash_returns_401(auth_client: TestClient) -> None:
     response = auth_client.post(
         "/api/v1/auth/login",
@@ -220,7 +230,8 @@ def seed_admin(db: Session) -> None:
         username="deleted",
         password_hash=hash_password("Admin123!"),
         nickname="Deleted",
-        status="deleted",
+        status="enabled",
+        deleted_at=datetime.now(timezone.utc),
     )
     broken_hash_user = User(
         username="broken",
