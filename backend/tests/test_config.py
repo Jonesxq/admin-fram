@@ -2,6 +2,30 @@ from app.core.config import Settings
 from app.seed import get_initial_admin_password
 
 
+def test_settings_defaults_allow_local_frontend_cors_origins() -> None:
+    settings = Settings()
+
+    assert settings.cors_origins == [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+
+
+def test_settings_accepts_comma_separated_cors_origins(tmp_path) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "CORS_ORIGINS=https://admin.example.com,http://localhost:5173",
+        encoding="utf-8",
+    )
+
+    settings = Settings(_env_file=env_file)
+
+    assert settings.cors_origins == [
+        "https://admin.example.com",
+        "http://localhost:5173",
+    ]
+
+
 def test_settings_accepts_seed_environment_variables(tmp_path) -> None:
     env_file = tmp_path / ".env"
     env_file.write_text(

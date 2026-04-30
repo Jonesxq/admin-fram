@@ -30,6 +30,7 @@ For the local demo account, temporarily edit `backend/.env` so it contains these
 ```env
 DATABASE_URL=mysql+pymysql://open_admin:open_admin_password@127.0.0.1:3306/open_admin
 JWT_SECRET_KEY=change-me-in-local-env
+CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 INITIAL_ADMIN_PASSWORD=Admin123!
 ALLOW_DEFAULT_ADMIN_PASSWORD=1
 ```
@@ -51,6 +52,8 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 The API is available at `http://localhost:8000/api/v1`.
+
+The default `CORS_ORIGINS` value allows the local Vite frontend origins. For shared, staging, or production deployments, replace it with the actual frontend origin list. Do not use `*` together with credentialed requests.
 
 ## 4. Configure Frontend
 

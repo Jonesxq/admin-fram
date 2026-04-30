@@ -38,6 +38,7 @@ admin / Admin123!
 - 后端默认端口：`8000`
 - API 前缀：`/api/v1`
 - MySQL 默认端口：`3306`
+- 本地 CORS Origins：`http://localhost:5173,http://127.0.0.1:5173`
 
 ## 开发命令
 

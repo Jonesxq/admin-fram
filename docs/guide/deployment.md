@@ -44,6 +44,7 @@ API_PREFIX=/api/v1
 DATABASE_URL=mysql+pymysql://open_admin:<password>@<mysql-host>:3306/open_admin
 JWT_SECRET_KEY=<long-random-secret>
 JWT_EXPIRE_MINUTES=120
+CORS_ORIGINS=https://admin.example.com
 INITIAL_ADMIN_PASSWORD=<strong-initial-password>
 ALLOW_DEFAULT_ADMIN_PASSWORD=0
 ```
@@ -79,5 +80,5 @@ For production bootstrap, set a strong `INITIAL_ADMIN_PASSWORD` before running s
 - Keep `.env` files out of source control and deployment artifacts.
 - Restrict database network access to the backend runtime.
 - Serve the frontend and backend over HTTPS.
-- Prefer same-origin frontend and API access through a reverse proxy. If you deploy the frontend and API on different origins, add explicit CORS middleware configuration in the backend code before release; the current backend does not expose a documented environment-only CORS switch.
+- Prefer same-origin frontend and API access through a reverse proxy. If you deploy the frontend and API on different origins, set `CORS_ORIGINS` to the exact frontend origins as a comma-separated string or JSON list. Do not combine wildcard origins with credentialed requests.
 - Run `python -m pytest -v`, `python -m ruff check .`, `npm test`, `npm run typecheck`, and `npm run build` in CI before release.
