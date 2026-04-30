@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 
 import { loginApi, meApi, type AuthMenu, type AuthUser, type LoginPayload } from '@/api/auth'
+import { useTabsStore } from '@/stores/tabs'
 
 interface AuthState {
   token: string
@@ -53,11 +54,14 @@ export const useAuthStore = defineStore('auth', {
       return result
     },
     logout() {
+      const tabsStore = useTabsStore()
+
       this.setToken('')
       this.user = null
       this.roles = []
       this.permissions = []
       this.menus = []
+      tabsStore.resetTabs()
     },
     hasPermission(permission: string) {
       if (this.roles.includes('admin')) {

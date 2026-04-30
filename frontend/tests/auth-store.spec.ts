@@ -2,6 +2,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { loginApi, meApi } from '@/api/auth'
 import { useAuthStore } from '../src/stores/auth'
+import { useTabsStore } from '../src/stores/tabs'
 
 vi.mock('@/api/auth', () => ({
   loginApi: vi.fn(),
@@ -38,5 +39,29 @@ describe('auth store', () => {
     await expect(store.login({ username: 'admin', password: 'secret' })).rejects.toThrow('profile failed')
     expect(store.token).toBe('')
     expect(localStorage.getItem('access_token')).toBeNull()
+  })
+
+  it('clears visited tabs on logout', () => {
+    const authStore = useAuthStore()
+    const tabsStore = useTabsStore()
+
+    tabsStore.visitedTabs = [
+      {
+        path: '/dashboard',
+        fullPath: '/dashboard',
+        title: '仪表盘',
+        affix: true
+      },
+      {
+        path: '/system/users',
+        fullPath: '/system/users',
+        title: '用户管理',
+        affix: false
+      }
+    ]
+
+    authStore.logout()
+
+    expect(tabsStore.visitedTabs).toEqual([])
   })
 })

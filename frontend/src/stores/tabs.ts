@@ -59,6 +59,9 @@ export const useTabsStore = defineStore('tabs', {
     },
     clearTabs() {
       this.visitedTabs = this.visitedTabs.filter(tab => tab.affix)
+    },
+    resetTabs() {
+      this.visitedTabs = []
     }
   }
 })

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import {
   Expand,
   Fold,
@@ -20,12 +21,21 @@ const router = useRouter()
 const username = computed(() => authStore.user?.nickname || authStore.user?.username || '管理员')
 
 async function toggleFullscreen() {
-  if (document.fullscreenElement) {
-    await document.exitFullscreen()
+  if (!document.fullscreenEnabled) {
+    ElMessage.warning('当前浏览器不支持全屏')
     return
   }
 
-  await document.documentElement.requestFullscreen()
+  try {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen()
+      return
+    }
+
+    await document.documentElement.requestFullscreen()
+  } catch {
+    ElMessage.warning('全屏切换失败')
+  }
 }
 
 async function logout() {
@@ -49,13 +59,29 @@ async function logout() {
 
     <div class="top-bar__actions">
       <ElButton circle text :icon="FullScreen" aria-label="全屏" @click="toggleFullscreen" />
-      <ElButton
-        circle
-        text
-        :icon="MagicStick"
-        aria-label="主题"
-        @click="appStore.toggleThemePanel()"
-      />
+      <ElPopover
+        :visible="appStore.themePanelOpen"
+        placement="bottom-end"
+        trigger="click"
+        width="220"
+        @hide="appStore.closeThemePanel()"
+      >
+        <template #reference>
+          <ElButton
+            circle
+            text
+            :icon="MagicStick"
+            aria-label="主题"
+            @click="appStore.toggleThemePanel()"
+          />
+        </template>
+
+        <div class="theme-popover">
+          <strong>主题设置</strong>
+          <span>当前使用默认后台主题</span>
+          <span class="theme-popover__swatch" aria-hidden="true" />
+        </div>
+      </ElPopover>
 
       <ElDropdown trigger="click">
         <button class="top-bar__user" type="button">
@@ -115,5 +141,24 @@ async function logout() {
 
 .top-bar__user:hover {
   background: #f3f6fa;
+}
+
+.theme-popover {
+  display: grid;
+  gap: 8px;
+  color: var(--oa-text);
+}
+
+.theme-popover span {
+  color: var(--oa-muted);
+  font-size: 13px;
+}
+
+.theme-popover__swatch {
+  display: block;
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--oa-primary), #38bdf8, #f59e0b);
 }
 </style>
