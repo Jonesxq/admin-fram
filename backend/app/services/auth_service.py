@@ -28,18 +28,22 @@ def build_token(user: User) -> TokenResponse:
 
 
 def build_current_user(user: User) -> dict:
-    enabled_roles = [role for role in user.roles if role.status == "enabled"]
+    enabled_roles = [
+        role
+        for role in user.roles
+        if role.status == "enabled" and role.deleted_at is None
+    ]
     permissions = {
         menu.permission
         for role in enabled_roles
         for menu in role.menus
-        if menu.status == "enabled" and menu.permission
+        if menu.status == "enabled" and menu.deleted_at is None and menu.permission
     }
     menus_by_id = {
         menu.id: serialize_menu(menu)
         for role in enabled_roles
         for menu in role.menus
-        if menu.status == "enabled" and menu.type == "menu"
+        if menu.status == "enabled" and menu.deleted_at is None and menu.type == "menu"
     }
 
     return {

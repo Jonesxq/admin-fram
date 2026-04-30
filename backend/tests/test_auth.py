@@ -67,36 +67,43 @@ def test_me_without_token_returns_401(auth_client: TestClient) -> None:
 
 
 def test_me_with_admin_token_returns_current_user_payload(auth_client: TestClient) -> None:
-    login_response = auth_client.post(
-        "/api/v1/auth/login",
-        json={"username": "admin", "password": "Admin123!"},
-    )
-    token = login_response.json()["data"]["access_token"]
-
-    response = auth_client.get(
-        "/api/v1/auth/me",
-        headers={"Authorization": f"Bearer {token}"},
-    )
+    response = get_me_with_admin_token(auth_client)
 
     assert response.status_code == 200
-    assert response.json()["data"] == {
-        "user": {"id": 1, "username": "admin", "nickname": "Administrator"},
-        "roles": ["admin"],
-        "permissions": ["system:user", "system:user:list"],
-        "menus": [
-            {
-                "id": 2,
-                "parent_id": None,
-                "type": "menu",
-                "title": "用户管理",
-                "path": "/system/users",
-                "component": "system/User",
-                "permission": "system:user",
-                "icon": "users",
-                "sort": 1,
-            },
-        ],
-    }
+    data = response.json()["data"]
+    assert data["user"] == {"id": 1, "username": "admin", "nickname": "Administrator"}
+    assert data["roles"] == ["admin"]
+    assert data["permissions"] == ["system:user", "system:user:list"]
+    assert data["menus"] == [
+        {
+            "id": 2,
+            "parent_id": None,
+            "type": "menu",
+            "title": "用户管理",
+            "path": "/system/users",
+            "component": "system/User",
+            "permission": "system:user",
+            "icon": "users",
+            "sort": 1,
+        },
+    ]
+
+
+def test_me_ignores_soft_deleted_role_grants(auth_client: TestClient) -> None:
+    response = get_me_with_admin_token(auth_client)
+
+    data = response.json()["data"]
+    assert "auditor" not in data["roles"]
+    assert "audit:log:list" not in data["permissions"]
+    assert all(menu["path"] != "/audit/logs" for menu in data["menus"])
+
+
+def test_me_ignores_soft_deleted_menu_grants(auth_client: TestClient) -> None:
+    response = get_me_with_admin_token(auth_client)
+
+    data = response.json()["data"]
+    assert "system:secret" not in data["permissions"]
+    assert all(menu["path"] != "/system/secret" for menu in data["menus"])
 
 
 def test_me_with_token_without_exp_returns_401(auth_client: TestClient) -> None:
@@ -184,6 +191,15 @@ def get_me_with_token(auth_client: TestClient, token: str):
     )
 
 
+def get_me_with_admin_token(auth_client: TestClient):
+    login_response = auth_client.post(
+        "/api/v1/auth/login",
+        json={"username": "admin", "password": "Admin123!"},
+    )
+    token = login_response.json()["data"]["access_token"]
+    return get_me_with_token(auth_client, token)
+
+
 def encode_test_token(payload: dict) -> str:
     return jwt.encode(payload, settings.jwt_secret_key, algorithm="HS256")
 
@@ -212,13 +228,46 @@ def seed_admin(db: Session) -> None:
         sort=1,
         status="enabled",
     )
-    role = Role(code="admin", name="Administrator", status="enabled", menus=[permission, menu])
+    soft_deleted_menu = Menu(
+        type="menu",
+        title="隐藏菜单",
+        path="/system/secret",
+        component="system/Secret",
+        permission="system:secret",
+        icon="lock",
+        sort=2,
+        status="enabled",
+        deleted_at=datetime.now(timezone.utc),
+    )
+    soft_deleted_role_menu = Menu(
+        type="menu",
+        title="审计日志",
+        path="/audit/logs",
+        component="audit/Log",
+        permission="audit:log:list",
+        icon="list",
+        sort=3,
+        status="enabled",
+    )
+    role = Role(
+        code="admin",
+        name="Administrator",
+        status="enabled",
+        menus=[permission, menu, soft_deleted_menu],
+    )
+    soft_deleted_role = Role(
+        code="auditor",
+        name="Auditor",
+        status="enabled",
+        deleted_at=datetime.now(timezone.utc),
+        menus=[soft_deleted_role_menu],
+    )
     user = User(
         username="admin",
         password_hash=hash_password("Admin123!"),
         nickname="Administrator",
         status="enabled",
-        roles=[role],
+        roles=[role, soft_deleted_role],
     )
     disabled_user = User(
         username="disabled",
