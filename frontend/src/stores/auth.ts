@@ -32,7 +32,13 @@ export const useAuthStore = defineStore('auth', {
       const result = await loginApi(payload)
 
       this.setToken(result.access_token)
-      await this.fetchMe()
+
+      try {
+        await this.fetchMe()
+      } catch (error) {
+        this.logout()
+        throw error
+      }
 
       return result
     },

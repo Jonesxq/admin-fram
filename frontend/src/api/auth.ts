@@ -1,5 +1,9 @@
 import { apiClient } from './client'
 
+interface ApiResponse<T> {
+  data: T
+}
+
 export interface LoginPayload {
   username: string
   password: string
@@ -36,13 +40,13 @@ export interface MeResult {
 }
 
 export async function loginApi(payload: LoginPayload): Promise<LoginResult> {
-  const response = await apiClient.post('/auth/login', payload)
+  const response = await apiClient.post<ApiResponse<LoginResult>>('/auth/login', payload)
 
   return response.data.data
 }
 
 export async function meApi(): Promise<MeResult> {
-  const response = await apiClient.get('/auth/me')
+  const response = await apiClient.get<ApiResponse<MeResult>>('/auth/me')
 
   return response.data.data
 }
