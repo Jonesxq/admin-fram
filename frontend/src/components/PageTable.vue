@@ -26,7 +26,7 @@ const props = withDefaults(
   }>(),
   {
     keywordPlaceholder: '请输入关键词',
-    searchable: true
+    searchable: false
   }
 )
 
