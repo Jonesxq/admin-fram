@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from typing import Annotated
 
 import jwt
@@ -39,6 +40,19 @@ def get_current_user(
         raise unauthorized_error()
 
     return user
+
+
+def require_permission(permission: str) -> Callable[[User], User]:
+    def dependency(
+        current_user: Annotated[User, Depends(get_current_user)],
+    ) -> User:
+        from app.services.rbac_service import is_admin, user_permissions
+
+        if is_admin(current_user) or permission in user_permissions(current_user):
+            return current_user
+        raise AppError(code=100403, message="无权限", status_code=403)
+
+    return dependency
 
 
 def unauthorized_error() -> AppError:
