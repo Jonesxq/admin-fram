@@ -63,7 +63,6 @@ class DictTypeItem(BaseModel):
 class ConfigItem(BaseModel):
     id: int
     key: str
-    value: str
     name: str
     remark: str | None = None
 

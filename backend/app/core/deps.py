@@ -5,12 +5,12 @@ import jwt
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.database import get_db
 from app.core.errors import AppError
 from app.core.security import decode_access_token
-from app.models.system import User
+from app.models.system import Role, User
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -32,7 +32,11 @@ def get_current_user(
         raise unauthorized_error()
 
     user = (
-        db.scalar(select(User).where(User.id == int(subject), User.deleted_at.is_(None)))
+        db.scalar(
+            select(User)
+            .options(selectinload(User.roles).selectinload(Role.menus))
+            .where(User.id == int(subject), User.deleted_at.is_(None)),
+        )
         if str(subject).isdigit()
         else None
     )

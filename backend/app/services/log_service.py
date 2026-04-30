@@ -6,8 +6,20 @@ from app.services.system_service import page_query
 
 
 def list_login_logs(db: Session, page: int = 1, page_size: int = 20) -> PageResponse:
-    return page_query(db, LoginLog, page, page_size)
+    return page_query(
+        db,
+        LoginLog,
+        page,
+        page_size,
+        order_by=(LoginLog.created_at.desc(), LoginLog.id.desc()),
+    )
 
 
 def list_operation_logs(db: Session, page: int = 1, page_size: int = 20) -> PageResponse:
-    return page_query(db, OperationLog, page, page_size)
+    return page_query(
+        db,
+        OperationLog,
+        page,
+        page_size,
+        order_by=(OperationLog.created_at.desc(), OperationLog.id.desc()),
+    )

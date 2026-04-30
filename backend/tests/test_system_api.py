@@ -81,6 +81,17 @@ def test_system_users_returns_page_without_password_hash(system_client: TestClie
     assert all("password_hash" not in item for item in data["items"])
 
 
+def test_system_configs_do_not_expose_raw_value(system_client: TestClient) -> None:
+    response = system_client.get(
+        "/api/v1/system/configs",
+        headers=auth_headers(system_client),
+    )
+
+    data = response.json()["data"]
+    assert data["total"] == 1
+    assert "value" not in data["items"][0]
+
+
 def test_system_roles_returns_admin_role(system_client: TestClient) -> None:
     response = system_client.get(
         "/api/v1/system/roles",
@@ -115,6 +126,19 @@ def test_system_list_endpoints_return_page_shape(system_client: TestClient, path
     assert data["page"] == 1
     assert data["page_size"] == 20
     assert isinstance(data["items"], list)
+
+
+def test_log_list_endpoints_return_newest_first(system_client: TestClient) -> None:
+    headers = auth_headers(system_client)
+
+    login_logs = system_client.get("/api/v1/system/login-logs", headers=headers).json()["data"]
+    operation_logs = system_client.get(
+        "/api/v1/system/operation-logs",
+        headers=headers,
+    ).json()["data"]
+
+    assert [item["username"] for item in login_logs["items"]] == ["operator", "admin"]
+    assert [item["username"] for item in operation_logs["items"]] == ["operator", "admin"]
 
 
 def auth_headers(client: TestClient) -> dict[str, str]:
@@ -175,6 +199,26 @@ def seed_system(db: Session) -> None:
         Post(code="dev", name="Developer", status="enabled"),
         DictType(code="sys_status", name="状态", status="enabled"),
         Config(key="site.name", value="Admin", name="站点名称"),
-        LoginLog(username="admin", success=True),
-        OperationLog(username="admin", title="用户查询", permission="system:user:list"),
+        LoginLog(
+            username="admin",
+            success=True,
+            created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        ),
+        LoginLog(
+            username="operator",
+            success=True,
+            created_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
+        ),
+        OperationLog(
+            username="admin",
+            title="用户查询",
+            permission="system:user:list",
+            created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        ),
+        OperationLog(
+            username="operator",
+            title="角色查询",
+            permission="system:role:list",
+            created_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
+        ),
     ])

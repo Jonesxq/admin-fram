@@ -11,7 +11,19 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.core.security import hash_password
 from app.models.base import Base
 from app.models import system
-from app.seed import seed
+from app.seed import MENU_SEEDS, seed
+
+SYSTEM_LIST_PERMISSIONS = {
+    "system:user:list",
+    "system:role:list",
+    "system:menu:list",
+    "system:dept:list",
+    "system:post:list",
+    "system:dict:list",
+    "system:config:list",
+    "system:login-log:list",
+    "system:operation-log:list",
+}
 
 
 def test_system_tables_are_registered() -> None:
@@ -46,7 +58,7 @@ def test_seed_is_idempotent_and_uses_stable_menu_identity(
     with seed_session() as session:
         seed(session)
         menu = session.scalar(
-            select(system.Menu).where(system.Menu.permission == "system:user"),
+            select(system.Menu).where(system.Menu.permission == "system:user:list"),
         )
         assert menu is not None
         menu.title = "用户管理-改名"
@@ -69,6 +81,27 @@ def test_seed_is_idempotent_and_uses_stable_menu_identity(
         assert menu_count == 10
         assert admin_role is not None
         assert len(admin_role.menus) == 10
+
+
+def test_seed_admin_role_has_system_list_permissions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("INITIAL_ADMIN_PASSWORD", "Strong-Local-Only-Password-123!")
+    monkeypatch.delenv("ALLOW_DEFAULT_ADMIN_PASSWORD", raising=False)
+
+    with seed_session() as session:
+        seed(session)
+        session.commit()
+
+        admin_role = session.scalar(select(system.Role).where(system.Role.code == "admin"))
+        assert admin_role is not None
+        permissions = {menu.permission for menu in admin_role.menus}
+
+        assert SYSTEM_LIST_PERMISSIONS <= permissions
+        assert {item["permission"] for item in MENU_SEEDS} == {
+            "dashboard:view",
+            *SYSTEM_LIST_PERMISSIONS,
+        }
 
 
 def test_seed_uses_strong_env_password_without_allow_flag(monkeypatch: pytest.MonkeyPatch) -> None:

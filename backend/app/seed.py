@@ -9,35 +9,35 @@ from app.models.system import Menu, Role, User
 
 
 MENU_SEEDS = [
-    {"title": "Dashboard", "path": "/dashboard", "component": "Dashboard", "permission": "dashboard"},
-    {"title": "用户管理", "path": "/system/users", "component": "system/User", "permission": "system:user"},
-    {"title": "角色管理", "path": "/system/roles", "component": "system/Role", "permission": "system:role"},
-    {"title": "菜单管理", "path": "/system/menus", "component": "system/Menu", "permission": "system:menu"},
-    {"title": "部门管理", "path": "/system/depts", "component": "system/Dept", "permission": "system:dept"},
-    {"title": "岗位管理", "path": "/system/posts", "component": "system/Post", "permission": "system:post"},
+    {"title": "Dashboard", "path": "/dashboard", "component": "Dashboard", "permission": "dashboard:view"},
+    {"title": "用户管理", "path": "/system/users", "component": "system/User", "permission": "system:user:list"},
+    {"title": "角色管理", "path": "/system/roles", "component": "system/Role", "permission": "system:role:list"},
+    {"title": "菜单管理", "path": "/system/menus", "component": "system/Menu", "permission": "system:menu:list"},
+    {"title": "部门管理", "path": "/system/depts", "component": "system/Dept", "permission": "system:dept:list"},
+    {"title": "岗位管理", "path": "/system/posts", "component": "system/Post", "permission": "system:post:list"},
     {
         "title": "字典管理",
         "path": "/system/dicts",
         "component": "system/Dict",
-        "permission": "system:dict",
+        "permission": "system:dict:list",
     },
     {
         "title": "参数配置",
         "path": "/system/configs",
         "component": "system/Config",
-        "permission": "system:config",
+        "permission": "system:config:list",
     },
     {
         "title": "登录日志",
         "path": "/monitor/login-logs",
         "component": "monitor/LoginLog",
-        "permission": "monitor:login-log",
+        "permission": "system:login-log:list",
     },
     {
         "title": "操作日志",
         "path": "/monitor/operation-logs",
         "component": "monitor/OperationLog",
-        "permission": "monitor:operation-log",
+        "permission": "system:operation-log:list",
     },
 ]
 
@@ -111,6 +111,13 @@ def seed_menus(db: Session, role: Role) -> None:
             )
             db.add(menu)
             db.flush()
+        else:
+            menu.title = item["title"]
+            menu.path = item["path"]
+            menu.component = item["component"]
+            menu.permission = item["permission"]
+            menu.sort = index
+            menu.status = "enabled"
 
         if role not in menu.roles:
             menu.roles.append(role)
@@ -119,7 +126,9 @@ def seed_menus(db: Session, role: Role) -> None:
 def get_seed_menu(db: Session, item: dict[str, str]) -> Menu | None:
     permission = item.get("permission")
     if permission:
-        return db.scalar(select(Menu).where(Menu.permission == permission))
+        menu = db.scalar(select(Menu).where(Menu.permission == permission))
+        if menu is not None:
+            return menu
 
     return db.scalar(select(Menu).where(Menu.path == item["path"]))
 
