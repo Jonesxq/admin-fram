@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
 from app.api.v1.router import router as api_v1_router
@@ -10,17 +11,37 @@ from app.core.logging import get_request_id
 app = FastAPI(title=settings.app_name)
 
 
+def _strip_validation_input(value: object) -> object:
+    if isinstance(value, dict):
+        return {
+            key: _strip_validation_input(item)
+            for key, item in value.items()
+            if key != "input"
+        }
+    if isinstance(value, list):
+        return [_strip_validation_input(item) for item in value]
+    return value
+
+
+@app.middleware("http")
+async def request_id_middleware(request: Request, call_next):
+    request.state.request_id = get_request_id(request)
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request.state.request_id
+    return response
+
+
 @app.exception_handler(AppError)
 def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
     return JSONResponse(
         status_code=exc.status_code,
-        content={
+        content=jsonable_encoder({
             "code": exc.code,
             "message": exc.message,
             "data": None,
             "details": exc.details,
             "request_id": get_request_id(request),
-        },
+        }),
     )
 
 
@@ -28,13 +49,13 @@ def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
 def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     return JSONResponse(
         status_code=422,
-        content={
+        content=jsonable_encoder({
             "code": 100422,
             "message": "参数校验失败",
             "data": None,
-            "details": exc.errors(),
+            "details": _strip_validation_input(exc.errors()),
             "request_id": get_request_id(request),
-        },
+        }),
     )
 
 

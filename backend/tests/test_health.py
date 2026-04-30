@@ -9,3 +9,4 @@ def test_health_returns_standard_response(client: TestClient) -> None:
     assert response.json()["message"] == "ok"
     assert response.json()["data"] == {"status": "ok"}
     assert "request_id" in response.json()
+    assert response.json()["request_id"] == response.headers["X-Request-ID"]
