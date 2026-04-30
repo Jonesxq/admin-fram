@@ -43,19 +43,28 @@ MENU_SEEDS = [
 
 DEFAULT_INITIAL_ADMIN_PASSWORD = "Admin123!"
 INITIAL_ADMIN_PASSWORD_ENV = "INITIAL_ADMIN_PASSWORD"
+ALLOW_DEFAULT_ADMIN_PASSWORD_ENV = "ALLOW_DEFAULT_ADMIN_PASSWORD"
+TRUTHY_ENV_VALUES = {"1", "true", "yes", "on"}
 
 
 def get_initial_admin_password() -> str:
-    password = os.getenv(INITIAL_ADMIN_PASSWORD_ENV)
-    if password:
+    password = os.getenv(INITIAL_ADMIN_PASSWORD_ENV, "").strip()
+    if password and password != DEFAULT_INITIAL_ADMIN_PASSWORD:
         return password
 
-    # Local development default only. Set INITIAL_ADMIN_PASSWORD outside local dev.
-    print(
-        "WARNING: using local-dev default admin password. "
-        f"Set {INITIAL_ADMIN_PASSWORD_ENV} for non-local environments.",
+    allow_default = os.getenv(ALLOW_DEFAULT_ADMIN_PASSWORD_ENV, "").strip().lower()
+    if allow_default in TRUTHY_ENV_VALUES:
+        print(
+            "WARNING: using local-development-only default admin password. "
+            f"Set a strong {INITIAL_ADMIN_PASSWORD_ENV} outside local development.",
+        )
+        return DEFAULT_INITIAL_ADMIN_PASSWORD
+
+    raise RuntimeError(
+        f"Refusing to seed admin with the public default password. Set a strong "
+        f"{INITIAL_ADMIN_PASSWORD_ENV}, or set {ALLOW_DEFAULT_ADMIN_PASSWORD_ENV}=1 "
+        "only for local development.",
     )
-    return DEFAULT_INITIAL_ADMIN_PASSWORD
 
 
 def get_or_create_admin_role(db: Session) -> Role:

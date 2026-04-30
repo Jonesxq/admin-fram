@@ -4,8 +4,9 @@ import sys
 from pathlib import Path
 
 import bcrypt
+import pytest
 from sqlalchemy import create_engine, func, select
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.security import hash_password
 from app.models.base import Base
@@ -36,12 +37,13 @@ def test_hash_password_uses_bcrypt_hash() -> None:
     assert bcrypt.checkpw("Admin123!".encode("utf-8"), password_hash.encode("utf-8"))
 
 
-def test_seed_is_idempotent_and_uses_stable_menu_identity() -> None:
-    engine = create_engine("sqlite+pysqlite:///:memory:")
-    Base.metadata.create_all(engine)
-    session_factory = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+def test_seed_is_idempotent_and_uses_stable_menu_identity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("INITIAL_ADMIN_PASSWORD", "Strong-Local-Only-Password-123!")
+    monkeypatch.delenv("ALLOW_DEFAULT_ADMIN_PASSWORD", raising=False)
 
-    with session_factory() as session:
+    with seed_session() as session:
         seed(session)
         menu = session.scalar(
             select(system.Menu).where(system.Menu.permission == "system:user"),
@@ -67,6 +69,65 @@ def test_seed_is_idempotent_and_uses_stable_menu_identity() -> None:
         assert menu_count == 10
         assert admin_role is not None
         assert len(admin_role.menus) == 10
+
+
+def test_seed_uses_strong_env_password_without_allow_flag(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("INITIAL_ADMIN_PASSWORD", "Strong-Local-Only-Password-123!")
+    monkeypatch.delenv("ALLOW_DEFAULT_ADMIN_PASSWORD", raising=False)
+
+    with seed_session() as session:
+        seed(session)
+        session.commit()
+
+        admin_user = session.scalar(select(system.User).where(system.User.username == "admin"))
+
+        assert admin_user is not None
+        assert bcrypt.checkpw(
+            "Strong-Local-Only-Password-123!".encode("utf-8"),
+            admin_user.password_hash.encode("utf-8"),
+        )
+
+
+@pytest.mark.parametrize("password", [None, "", "Admin123!"])
+def test_seed_rejects_missing_or_default_password_without_allow_flag(
+    password: str | None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    if password is None:
+        monkeypatch.delenv("INITIAL_ADMIN_PASSWORD", raising=False)
+    else:
+        monkeypatch.setenv("INITIAL_ADMIN_PASSWORD", password)
+    monkeypatch.delenv("ALLOW_DEFAULT_ADMIN_PASSWORD", raising=False)
+
+    with seed_session() as session:
+        with pytest.raises(RuntimeError, match="INITIAL_ADMIN_PASSWORD"):
+            seed(session)
+
+
+@pytest.mark.parametrize("allow_value", ["1", "true", "yes", "on"])
+def test_seed_allows_default_password_with_explicit_opt_in(
+    allow_value: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("INITIAL_ADMIN_PASSWORD", "Admin123!")
+    monkeypatch.setenv("ALLOW_DEFAULT_ADMIN_PASSWORD", allow_value)
+
+    with seed_session() as session:
+        seed(session)
+        session.commit()
+        seed(session)
+        session.commit()
+
+        admin_user_count = session.scalar(
+            select(func.count()).select_from(system.User).where(system.User.username == "admin"),
+        )
+        admin_user = session.scalar(select(system.User).where(system.User.username == "admin"))
+        menu_count = session.scalar(select(func.count()).select_from(system.Menu))
+
+        assert admin_user_count == 1
+        assert menu_count == 10
+        assert admin_user is not None
+        assert bcrypt.checkpw("Admin123!".encode("utf-8"), admin_user.password_hash.encode("utf-8"))
 
 
 def test_alembic_upgrade_and_downgrade_against_file_sqlite(tmp_path: Path) -> None:
@@ -102,3 +163,10 @@ def run_alembic(*args: str, env: dict[str, str]) -> subprocess.CompletedProcess[
         check=False,
         text=True,
     )
+
+
+def seed_session() -> Session:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    session_factory = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+    return session_factory()
