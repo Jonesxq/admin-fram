@@ -1,5 +1,6 @@
 .superpowers/
 .worktrees/
+.claude/
 .env
 *.local
 node_modules/
@@ -10,3 +11,4 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 *.pyc
+*.egg-info/
